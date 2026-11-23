@@ -63,7 +63,7 @@ export function ZipLoader() {
     setFilename("devon-preview-deployment.zip")
   }
   async function load(file?:File){try{await inspect(file)}catch(e){setReport(null);setSource(null);setError(e instanceof Error?e.message:"Could not inspect ZIP archive.")}}
-  const canExport=!!report&&report.checks.every(c=>c[1])&&!!report.scripts.build&&!!report.scripts.start&&!report.warnings.some(w=>w.startsWith("Static export"))
+  const canExport=!!report&&report.checks.every(c=>c[1])&&!!report.scripts.build&&!!report.scripts.start&&!report.warnings.some(w=>w.startsWith("Static export"))&&/^\/(?:[A-Za-z0-9._~-]+(?:\/[A-Za-z0-9._~-]+)*)?$/.test(deploymentPath)
   async function exportZip(){
     if(!source||!report||!canExport)return
     setBusy(true);setError("");setProgress(0)
@@ -77,6 +77,14 @@ export function ZipLoader() {
         out.file(path,await entry.async("uint8array"),{binary:true,createFolders:true})
         if(i%40===0)setProgress(Math.round(i/all.length*75))
       }
+      const configEntry=all.find(x=>safePath((x as any).unsafeOriginalName||x.name)===(report.root+"next.config.mjs"))
+      if(!configEntry)throw new Error("The source ZIP must contain next.config.mjs at its project root.")
+      let configText=await configEntry.async("string")
+      const normalizedPath=deploymentPath==="/"?"":deploymentPath.replace(/\/$/,"")
+      if(configText.includes("basePath:"))configText=configText.replace(/basePath:\s*[^,\n]+,?/,"basePath: "+JSON.stringify(normalizedPath)+",")
+      else if(configText.includes("const nextConfig = {"))configText=configText.replace("const nextConfig = {","const nextConfig = {\\n  basePath: "+JSON.stringify(normalizedPath)+",")
+      else throw new Error("Could not safely add basePath to next.config.mjs.")
+      out.file("next.config.mjs",configText)
       out.file("Dockerfile",docker);out.file("docker-compose.preview.yml",compose);out.file(".dockerignore","node_modules\n.next\n.git\n.env\n.env.*\n!.env.preview.example\n*.log\n");out.file(".env.preview.example",env)
       out.file("DEVON-PREVIEW-DEPLOYMENT.md",[
         "# Devon custom preview deployment","","This is a server-backed Next.js deployment, not a static export.","","## Deploy",
@@ -99,7 +107,7 @@ export function ZipLoader() {
       {error&&<div className="error">⚠ {error}</div>}
     </section>
     {report&&<><section className="section"><div className="heading"><div><small>02 / COMPATIBILITY</small><h2>Deployment checks</h2></div><b className="summary">{report.checks.filter(c=>c[1]).length}/{report.checks.length} PASSED</b></div><div className="checks">{report.checks.map(([label,ok,detail])=><div className="check" key={label}><span className={ok?"ok":"warn"}>{ok?"✓":"!"}</span><div><b>{label}</b><small>{detail}</small></div></div>)}</div>{report.warnings.length>0&&<div className="warnings"><b>Review before deployment</b>{report.warnings.map(w=><p key={w}>{w}</p>)}</div>}</section>
-    <section className="section"><div className="heading"><div><small>03 / DEPLOYMENT PACKAGE</small><h2>Prepare custom preview</h2></div><small className="local">LOCAL PROCESSING</small></div><div className="export"><div className="export-top"><span className="package-icon">▣</span><div><b>Container-ready Devon source</b><p>Adds Docker, Compose, Node 22 runtime, and preview instructions. Files are processed in this browser.</p></div></div><label htmlFor="out-name">OUTPUT FILE</label><input id="out-name" value={filename} onChange={e=>setFilename(e.target.value)}/><button className="primary" onClick={()=>void exportZip()} disabled={busy||!canExport}>{busy?"Building deployment ZIP · "+progress+"%":"↓  Download deployment ZIP  →"}</button>{busy&&<div className="progress"><span style={{width:progress+"%"}}/></div>}{!canExport&&<small className="disabled">Resolve the checks and required package scripts before exporting.</small>}</div></section></>}
+    <section className="section"><div className="heading"><div><small>03 / DEPLOYMENT PACKAGE</small><h2>Prepare custom preview</h2></div><small className="local">LOCAL PROCESSING</small></div><div className="export"><div className="export-top"><span className="package-icon">▣</span><div><b>Container-ready Devon source</b><p>Adds Docker, Compose, Node 22 runtime, and preview instructions. Files are processed in this browser.</p></div></div><label htmlFor="deployment-path">DEPLOYMENT URL PATH</label><input id="deployment-path" value={deploymentPath} onChange={e=>setDeploymentPath(e.target.value)} placeholder="/preview"/><small className="disabled">Use / for the domain root or /preview for a subdirectory. Applied to Devon before its production build.</small><label htmlFor="out-name">OUTPUT FILE</label><input id="out-name" value={filename} onChange={e=>setFilename(e.target.value)}/><button className="primary" onClick={()=>void exportZip()} disabled={busy||!canExport}>{busy?"Building deployment ZIP · "+progress+"%":"↓  Download deployment ZIP  →"}</button>{busy&&<div className="progress"><span style={{width:progress+"%"}}/></div>}{!canExport&&<small className="disabled">Resolve the checks and required package scripts before exporting.</small>}</div></section></>}
     <section className="workflow"><div className="heading"><div><small>04 / PREVIEW HOST</small><h2>From ZIP to live Devon</h2></div></div><div className="steps"><article><small>01</small><b>Export source</b><p>Get the ZIP from <code>dlcasto2/db-v2</code> and load it above.</p></article><article><small>02</small><b>Prepare package</b><p>Export the deployment ZIP with runtime files.</p></article><article><small>03</small><b>Build on host</b><p>Run Docker Compose on a persistent Node host.</p></article><article><small>04</small><b>Open preview</b><p>Route your HTTPS hostname to port <code>3000</code>.</p></article></div><div className="note"><b>ⓘ Devon needs a server runtime.</b><p>Its proxy and API routes execute on the server. This prepares deployment files; it does not provision hosting, DNS, TLS, Redis, or API credentials.</p></div></section>
     <footer><span>DEVON ZIP LOADER · INDEPENDENT CUSTOM DEPLOYMENT</span><a href="https://github.com/dlcasto2/db-v2" target="_blank" rel="noreferrer">SOURCE: dlcasto2/db-v2 ↗</a></footer>
   </main>
