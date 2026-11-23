@@ -1,23 +1,14 @@
 {
   "name": "devon-zip-loader",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Native Node.js custom preview ZIP loader for Devon",
+  "main": "server.js",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check public/app.js"
   },
-  "dependencies": {
-    "jszip": "^3.10.1",
-    "lucide-react": "^0.454.0",
-    "next": "16.2.11",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.8.0"
-  }
+  "engines": { "node": ">=20" },
+  "dependencies": { "jszip": "^3.10.1" }
 }
