@@ -1,0 +1,35 @@
+name: Build and package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare source archive
+        run: |
+          mkdir -p artifacts
+          git archive --format=zip --prefix=devon-zip-loader/ HEAD > artifacts/devon-zip-loader-source.zip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify production build
+        run: npm run build
+      - name: Upload source archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devon-zip-loader-source
+          path: artifacts/devon-zip-loader-source.zip
+          if-no-files-found: error
+          retention-days: 14
