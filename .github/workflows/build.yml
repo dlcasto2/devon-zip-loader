@@ -13,20 +13,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check JavaScript syntax
+        run: npm run check
+      - name: Start server and verify health endpoint
+        run: |
+          npm start > /tmp/devon-zip-loader.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail http://127.0.0.1:3000/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/devon-zip-loader.log
+          exit 1
       - name: Prepare source archive
         run: |
           mkdir -p artifacts
           git archive --format=zip --prefix=devon-zip-loader/ HEAD > artifacts/devon-zip-loader-source.zip
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Verify production build
-        run: npm run build
-      - name: Upload source archive
-        if: always()
-        uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6
         with:
           name: devon-zip-loader-source
           path: artifacts/devon-zip-loader-source.zip
