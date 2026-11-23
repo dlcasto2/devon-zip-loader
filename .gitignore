@@ -9,3 +9,4 @@ coverage/
 !.env.example
 !.env.preview.example
 .DS_Store
+tsconfig.tsbuildinfo
