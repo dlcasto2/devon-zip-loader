@@ -1,15 +1,14 @@
 # Devon ZIP Loader
 
-A **pure Node.js** application for preparing the `dlcasto2/db-v2` source archive for a custom, server-backed Devon preview deployment.
+A **pure Node.js** custom preview ZIP loader for `dlcasto2/db-v2`. It can run locally as a small Node HTTP server or publish as a static site on GitHub Pages using GitHub Actions.
 
-This is not a `devon://apps` application. It no longer uses Next.js, React, TypeScript, or Turbopack. The loader itself runs on Node's built-in HTTP server and serves a static HTML/CSS/vanilla-JavaScript interface. JSZip is the only runtime dependency and is served from `node_modules` to the browser.
+The interface is HTML, CSS, and vanilla JavaScript. ZIP inspection and repackaging happen entirely in the visitor's browser. JSZip is the only runtime dependency. The Pages build copies JSZip's browser bundle into the static output, so GitHub Pages does not need to run Node.js.
 
-## Requirements
+This is not a `devon://apps` application.
 
-- Node.js 20 or newer (Node.js 22 LTS recommended)
-- npm
+## Run locally
 
-## Install and run
+Requires Node.js 20+ (Node.js 22 recommended).
 
 ```bash
 npm install
@@ -17,54 +16,57 @@ npm run check
 npm start
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. For automatic restart while editing, run `npm run dev`.
 
-For automatic restart while editing:
+## Deploy to GitHub Pages
+
+1. In the repository, open **Settings → Pages**.
+2. Set **Build and deployment → Source** to **GitHub Actions**.
+3. Push to `main` (or manually run the **Build and deploy to GitHub Pages** workflow).
+4. GitHub Actions installs JSZip, creates the static `_site/` folder, uploads it as a Pages artifact, and deploys it.
+
+The project-site URL will be:
+
+`https://dlcasto2.github.io/devon-zip-loader/`
+
+The page uses relative asset links, so it works under the repository subpath as well as a custom domain. The browser downloads the source ZIP from `dlcasto2/db-v2` and creates the deployment ZIP locally.
+
+## Static build locally
 
 ```bash
-npm run dev
+npm install
+npm run build:pages
 ```
 
-`npm install` creates the local `node_modules/` directory. It is intentionally excluded from Git because installed packages are reproducible from `package.json` and platform-specific native modules should not be committed.
+The generated static website is in `_site/`. Preview it with any static file server.
 
 ## Prepare a Devon preview package
 
 1. Download the source ZIP from [dlcasto2/db-v2](https://github.com/dlcasto2/db-v2/archive/refs/heads/main.zip).
 2. Drop it into the loader or choose it from your device.
-3. Review the project checks.
-4. Choose the deployment URL path (`/preview` by default, or `/` for the domain root).
-5. Download the generated `devon-preview-deployment.zip`.
+3. Review the compatibility checks.
+4. Choose the deployment URL path (`/preview` by default or `/` for the domain root).
+5. Download `devon-preview-deployment.zip`.
 6. Extract it on a host with Docker Engine and Docker Compose.
-7. Copy `.env.preview.example` to `.env` and add required credentials.
+7. Copy `.env.preview.example` to `.env` and add the required credentials.
 8. Run:
 
 ```bash
 docker compose -f docker-compose.preview.yml up -d --build
 ```
 
-For a `/preview` deployment, configure the reverse proxy to preserve the complete `/preview` prefix when forwarding requests to port 3000. Do not strip the prefix.
+For a `/preview` deployment, configure the reverse proxy to preserve the full `/preview` prefix when forwarding requests to port 3000.
 
 ## Archive handling
 
-ZIP inspection and repackaging happen in the browser; source files are not uploaded to this Node server. The loader enforces a 220 MB archive limit, a 22,000-file limit, and an estimated 900 MB expanded-size limit. It rejects unsafe paths and excludes common generated folders, environment files, private keys, and local credential files.
+ZIP files are processed in the browser; their contents are not uploaded to this server or GitHub Pages. The loader enforces a 220 MB compressed archive limit, a 22,000-file limit, and an estimated 900 MB expanded-size limit. It rejects unsafe paths and excludes common generated folders, environment files, private keys, and local credential files.
 
-## Endpoints
+## Local Node server endpoints
 
 - `GET /` — loader interface
-- `GET /app.js` — browser-side ZIP workflow
-- `GET /styles.css` — stylesheet
-- `GET /vendor/jszip.min.js` — JSZip browser bundle from `node_modules`
-- `GET /health` — JSON health response
+- `GET /app.js` — browser ZIP workflow
+- `GET /styles.css` — styles
+- `GET /vendor/jszip.min.js` — JSZip browser bundle served from `node_modules`
+- `GET /health` — local server health response
 
-## Project structure
-
-```
-server.js
-public/
-  index.html
-  app.js
-  styles.css
-package.json
-```
-
-The generated Devon deployment remains a Next.js application; only the ZIP Loader tool itself has been converted to pure Node.js.
+GitHub Pages serves the static files directly and does not run `server.js`. The Devon project being packaged remains a Next.js application; only this ZIP Loader is static/pure Node.js.
