@@ -47,5 +47,5 @@ const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.d
 }
 $("drop").onclick=e=>{if(!e.target.closest("a"))$("file").click()};$("drop").addEventListener("dragover",e=>{e.preventDefault();$("drop").classList.add("active")});$("drop").addEventListener("dragleave",()=> $("drop").classList.remove("active"));$("drop").addEventListener("drop",e=>{e.preventDefault();$("drop").classList.remove("active");inspect(e.dataTransfer.files[0]).catch(x=>error(x.message))});$("file").onchange=()=>inspect($("file").files[0]).catch(x=>error(x.message));$("deploy-path").oninput=update;$("export").onclick=exportZip;
 $("clear").onclick=()=>{source=report=null;$("file").value="";$("project").hidden=$("check-section").hidden=$("export-section").hidden=true;$("clear").hidden=true;$("error").hidden=true};
-fetch("/health").catch(()=>{});
+// The static Pages build does not require a server-side health endpoint.
 })();
