@@ -20,10 +20,10 @@ Open http://localhost:3000.
 1. Download the source archive from [dlcasto2/db-v2](https://github.com/dlcasto2/db-v2/archive/refs/heads/main.zip).
 2. Drop the ZIP into the loader or choose it from your device.
 3. Review the project checks. The loader looks for a Next.js package manifest, an App Router page, Devon's `app/api/proxy` route, and the pnpm lockfile.
-4. Download the generated `devon-preview-deployment.zip`.
-5. Extract that ZIP on a host with Docker Engine and Docker Compose.
-6. Copy `.env.preview.example` to `.env`, then add only the credentials required by the services enabled in your Devon deployment.
-7. Run:
+4. Set **Deployment URL Path** in the loader (`/preview` by default; use `/` for the domain root). The loader patches Devon's `next.config.mjs` with the selected Next.js `basePath`.\n5. Download the generated `devon-preview-deployment.zip`.
+6. Extract that ZIP on a host with Docker Engine and Docker Compose.
+7. Copy `.env.preview.example` to `.env`, then add only the credentials required by the services enabled in your Devon deployment. Keep `DEPLOYMENT_URL_PATH` set to the selected path.
+8. Run:
 
 ```bash
 docker compose -f docker-compose.preview.yml up -d --build
@@ -31,7 +31,7 @@ docker compose -f docker-compose.preview.yml up -d --build
 
 Route the preview hostname over HTTPS to the service on port 3000.
 
-The generated package includes a multi-stage Node.js 22 Dockerfile, a Compose service with a health check, a Docker ignore file, an environment template, and deployment instructions. Devon's `postinstall` step copies vendor assets, so the Docker build copies the source tree before installing dependencies.
+The generated package includes a multi-stage Node.js 22 Dockerfile, a Compose service with a health check, a Docker ignore file, an environment template, and deployment instructions. The chosen `DEPLOYMENT_URL_PATH` is passed as a Docker build argument and applied to Devon's Next.js `basePath` before `next build` (Next.js embeds this setting at build time). Devon's `postinstall` step copies vendor assets, so the Docker build copies the source tree before installing dependencies.
 
 ## Archive handling
 
