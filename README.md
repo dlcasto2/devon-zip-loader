@@ -1,54 +1,70 @@
 # Devon ZIP Loader
 
-A standalone Next.js 16 App Router application using Turbopack for development and production builds. It prepares the `dlcasto2/db-v2` source archive for a custom, server-backed Devon preview deployment.
+A **pure Node.js** application for preparing the `dlcasto2/db-v2` source archive for a custom, server-backed Devon preview deployment.
 
-This is **not** a `devon://apps` application and does not replace or extend Devon's browser-extension importer.
+This is not a `devon://apps` application. It no longer uses Next.js, React, TypeScript, or Turbopack. The loader itself runs on Node's built-in HTTP server and serves a static HTML/CSS/vanilla-JavaScript interface. JSZip is the only runtime dependency and is served from `node_modules` to the browser.
 
-## Run the loader
+## Requirements
 
-Requires Node.js 22 or newer.
+- Node.js 20 or newer (Node.js 22 LTS recommended)
+- npm
+
+## Install and run
 
 ```bash
 npm install
-npm run dev
+npm run check
+npm start
 ```
 
 Open http://localhost:3000.
 
+For automatic restart while editing:
+
+```bash
+npm run dev
+```
+
+`npm install` creates the local `node_modules/` directory. It is intentionally excluded from Git because installed packages are reproducible from `package.json` and platform-specific native modules should not be committed.
+
 ## Prepare a Devon preview package
 
-1. Download the source archive from [dlcasto2/db-v2](https://github.com/dlcasto2/db-v2/archive/refs/heads/main.zip).
-2. Drop the ZIP into the loader or choose it from your device.
-3. Review the project checks. The loader looks for a Next.js package manifest, an App Router page, Devon's `app/api/proxy` route, and the pnpm lockfile.
-4. Set **Deployment URL Path** in the loader (`/preview` by default; use `/` for the domain root). The loader patches Devon's `next.config.mjs` with the selected Next.js `basePath`. The generated `.env.preview.example` uses the same path, and the container health check probes that path instead of `/`. For `/preview`, configure your reverse proxy to forward `/preview/...` unchanged to port 3000; do not strip the prefix.
+1. Download the source ZIP from [dlcasto2/db-v2](https://github.com/dlcasto2/db-v2/archive/refs/heads/main.zip).
+2. Drop it into the loader or choose it from your device.
+3. Review the project checks.
+4. Choose the deployment URL path (`/preview` by default, or `/` for the domain root).
 5. Download the generated `devon-preview-deployment.zip`.
-6. Extract that ZIP on a host with Docker Engine and Docker Compose.
-7. Copy `.env.preview.example` to `.env`, then add only the credentials required by the services enabled in your Devon deployment. Keep `DEPLOYMENT_URL_PATH` set to the selected path.
+6. Extract it on a host with Docker Engine and Docker Compose.
+7. Copy `.env.preview.example` to `.env` and add required credentials.
 8. Run:
 
 ```bash
 docker compose -f docker-compose.preview.yml up -d --build
 ```
 
-Route the preview hostname over HTTPS to the service on port 3000.
-
-The generated package includes a multi-stage Node.js 22 Dockerfile, a Compose service with a health check, a Docker ignore file, an environment template, and deployment instructions. The selected path is written to `next.config.mjs` as Next.js `basePath` before `next build` (Next.js embeds this setting at build time) and to `.env.preview.example` for the container health check. Keep the `.env` path identical to the path selected in the loader. When using `/preview`, the reverse proxy must preserve the `/preview` prefix when forwarding requests to the app; stripping it will break routing. Devon's `postinstall` step copies vendor assets, so the Docker build copies the source tree before installing dependencies.
+For a `/preview` deployment, configure the reverse proxy to preserve the complete `/preview` prefix when forwarding requests to port 3000. Do not strip the prefix.
 
 ## Archive handling
 
-ZIP files are inspected and repackaged in the browser; this loader does not upload the source ZIP to a server. It enforces a 220 MB upload limit, a 22,000-file entry limit, and an estimated 900 MB expanded-size limit. It rejects unsafe archive paths and excludes common build/dependency folders, environment files, private keys, and local credential files from the deployment archive.
+ZIP inspection and repackaging happen in the browser; source files are not uploaded to this Node server. The loader enforces a 220 MB archive limit, a 22,000-file limit, and an estimated 900 MB expanded-size limit. It rejects unsafe paths and excludes common generated folders, environment files, private keys, and local credential files.
 
-## Hosting requirements
+## Endpoints
 
-Devon is not a static site. Its proxy and API routes execute on the server, so static export and static-only hosting (including GitHub Pages) are not suitable for a full Devon deployment. Use a persistent Node/Docker host or a provider that supports the required server runtime.
+- `GET /` — loader interface
+- `GET /app.js` — browser-side ZIP workflow
+- `GET /styles.css` — stylesheet
+- `GET /vendor/jszip.min.js` — JSZip browser bundle from `node_modules`
+- `GET /health` — JSON health response
 
-The loader prepares deployment files; it does not create the preview environment, provision DNS/TLS, set up Redis, or create API credentials. Depending on which Devon features are enabled, you may need Redis, model-provider credentials, Auth0 configuration, and the platform-specific settings documented in the source repository's README.
+## Project structure
 
-## Build
-
-```bash
-npm run build
-npm run start
+```
+server.js
+public/
+  index.html
+  app.js
+  styles.css
+package.json
 ```
 
-GitHub Actions builds the application on pushes to `main` and publishes a 14-day source ZIP artifact when the workflow can complete its archive step.
+The generated Devon deployment remains a Next.js application; only the ZIP Loader tool itself has been converted to pure Node.js.
