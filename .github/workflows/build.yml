@@ -1,4 +1,4 @@
-name: Build and package
+name: Build and deploy to GitHub Pages
 
 on:
   push:
@@ -7,20 +7,35 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
         with:
           node-version: 22
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
       - name: Check JavaScript syntax
         run: npm run check
-      - name: Start server and verify health endpoint
+
+      - name: Verify local Node server
         run: |
           npm start > /tmp/devon-zip-loader.log 2>&1 &
           SERVER_PID=$!
@@ -33,13 +48,30 @@ jobs:
           done
           cat /tmp/devon-zip-loader.log
           exit 1
-      - name: Prepare source archive
+
+      - name: Build static Pages site
+        run: npm run build:pages
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site/
+
+      - name: Prepare source archive artifact
         run: |
           mkdir -p artifacts
           git archive --format=zip --prefix=devon-zip-loader/ HEAD > artifacts/devon-zip-loader-source.zip
-      - uses: actions/upload-artifact@v6
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v6
         with:
           name: devon-zip-loader-source
           path: artifacts/devon-zip-loader-source.zip
-          if-no-files-found: error
           retention-days: 14
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
