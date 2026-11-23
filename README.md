@@ -31,7 +31,7 @@ docker compose -f docker-compose.preview.yml up -d --build
 
 Route the preview hostname over HTTPS to the service on port 3000.
 
-The generated package includes a multi-stage Node.js 22 Dockerfile, a Compose service with a health check, a Docker ignore file, an environment template, and deployment instructions. The chosen `DEPLOYMENT_URL_PATH` is passed as a Docker build argument and applied to Devon's Next.js `basePath` before `next build` (Next.js embeds this setting at build time). Devon's `postinstall` step copies vendor assets, so the Docker build copies the source tree before installing dependencies.
+The generated package includes a multi-stage Node.js 22 Dockerfile, a Compose service with a health check, a Docker ignore file, an environment template, and deployment instructions. The selected path is written to `next.config.mjs` as Next.js `basePath` before `next build` (Next.js embeds this setting at build time) and to `.env.preview.example` for the container health check. Keep the `.env` path identical to the path selected in the loader. When using `/preview`, the reverse proxy must preserve the `/preview` prefix when forwarding requests to the app; stripping it will break routing. Devon's `postinstall` step copies vendor assets, so the Docker build copies the source tree before installing dependencies.
 
 ## Archive handling
 
