@@ -82,7 +82,7 @@ export function ZipLoader() {
       let configText=await configEntry.async("string")
       const normalizedPath=deploymentPath==="/"?"":deploymentPath.replace(/\/$/,"")
       if(configText.includes("basePath:"))configText=configText.replace(/basePath:\s*[^,\n]+,?/,"basePath: "+JSON.stringify(normalizedPath)+",")
-      else if(configText.includes("const nextConfig = {"))configText=configText.replace("const nextConfig = {","const nextConfig = {\\n  basePath: "+JSON.stringify(normalizedPath)+",")
+      else if(configText.includes("const nextConfig = {"))configText=configText.replace("const nextConfig = {",const nextConfig = {\n  basePath: "+JSON.stringify(normalizedPath)+",")
       else throw new Error("Could not safely add basePath to next.config.mjs.")
       out.file("next.config.mjs",configText)
       out.file("Dockerfile",docker);out.file("docker-compose.preview.yml",compose);out.file(".dockerignore","node_modules\n.next\n.git\n.env\n.env.*\n!.env.preview.example\n*.log\n");out.file(".env.preview.example",env)
