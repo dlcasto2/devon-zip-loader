@@ -7,8 +7,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check": "node --check server.js && node --check public/app.js"
+    "check": "node --check server.js && node --check public/app.js",
+    "build:pages": "node scripts/build-pages.js"
   },
-  "engines": { "node": ">=20" },
-  "dependencies": { "jszip": "^3.10.1" }
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  }
 }
